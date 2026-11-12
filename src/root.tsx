@@ -6,7 +6,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <title>Aleksander Wêgrzyn - Personal Page</title>
+        <title>Aleksander WÃªgrzyn - Personal Page</title>
       </head>
       <body>
         <Outlet />
@@ -15,3 +15,4 @@ export default function App() {
     </html>
   );
 }
+
