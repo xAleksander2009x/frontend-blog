@@ -6,7 +6,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <title>Aleksander Wêgrzyn - Personal Page</title>
+        <title>Aleksander WÄ™grzyn - Personal Page</title>
       </head>
       <body>
         <Outlet />
