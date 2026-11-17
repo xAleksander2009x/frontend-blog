@@ -1,4 +1,5 @@
 import { Button, InfoMessage } from "@gi-org-pl/athena";
+import { Link } from "react-router";
 import { useArticles } from "../../../hooks/useArticles";
 import type { Article } from "../../../services/api/schemas/article.schema";
 
@@ -65,18 +66,23 @@ const BlogSection = ({ title = "Articles", loader }: BlogSectionProps) => {
           {articles.map((article) => (
             <li
               key={article.id}
-              className="min-w-0 rounded-lg border border-gi-dark-ash bg-gi-light-gray p-4"
+              className="min-w-0 rounded-lg border border-gi-dark-ash bg-gi-light-gray transition-colors hover:border-gi-dark-primary"
             >
-              <article className="min-w-0 space-y-1">
-                <h3 className="break-words text-lg font-semibold text-gi-dark-primary">
-                  {article.title}
-                </h3>
-                <time
-                  dateTime={article.publishedAt}
-                  className="block text-sm text-gi-dark-gray"
+              <article className="min-w-0">
+                <Link
+                  to={`/articles/${article.id}`}
+                  className="block space-y-1 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-gi-dark-primary"
                 >
-                  {formatPublicationDate(article.publishedAt)}
-                </time>
+                  <h3 className="break-words text-lg font-semibold text-gi-dark-primary underline-offset-4 hover:underline">
+                    {article.title}
+                  </h3>
+                  <time
+                    dateTime={article.publishedAt}
+                    className="block text-sm text-gi-dark-gray"
+                  >
+                    {formatPublicationDate(article.publishedAt)}
+                  </time>
+                </Link>
               </article>
             </li>
           ))}

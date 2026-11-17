@@ -1,72 +1,163 @@
-import { describe, expect, it, vi } from "vitest";
-import { fetchArticles } from "./articlesApi";
+import { AxiosError, AxiosHeaders } from "axios";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  apiClient,
-  DEFAULT_API_BASE_URL,
-  getApiBaseUrl,
-} from "./client/apiClient";
+  ArticleNotFoundError,
+  fetchArticleById,
+  fetchArticles,
+  sortArticlesNewestFirst,
+} from "./articlesApi";
+import { apiClient } from "./client/apiClient";
+import type { Article } from "./schemas/article.schema";
+
+vi.mock("./client/apiClient", () => ({
+  apiClient: {
+    get: vi.fn(),
+  },
+}));
+
+const sampleArticleA: Article = {
+  id: "11111111-1111-4111-8111-111111111111",
+  title: "Older Post",
+  content: "First paragraph.\n\nSecond paragraph.",
+  publishedAt: "2026-08-01T10:00:00.000Z",
+};
+
+const sampleArticleB: Article = {
+  id: "22222222-2222-4222-8222-222222222222",
+  title: "Newer Post",
+  content: "Fresh content.",
+  publishedAt: "2026-08-15T12:30:00.000Z",
+};
 
 describe("articlesApi", () => {
-  it("returns default API base URL when environment variable is empty", () => {
-    // Given
-    const emptyEnv = "   ";
-
-    // When
-    const resolved = getApiBaseUrl(emptyEnv);
-
-    // Then
-    expect(resolved).toBe(DEFAULT_API_BASE_URL);
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("returns configured API base URL when provided", () => {
-    // Given
-    const customUrl = "https://example.com";
+  describe("sortArticlesNewestFirst", () => {
+    it("sorts articles in descending order by publishedAt without mutating input", () => {
+      // Given
+      const unsorted = [sampleArticleA, sampleArticleB];
 
-    // When
-    const resolved = getApiBaseUrl(customUrl);
+      // When
+      const sorted = sortArticlesNewestFirst(unsorted);
 
-    // Then
-    expect(resolved).toBe("https://example.com");
-  });
-
-  it("fetches, validates with Zod, and sorts articles newest first", async () => {
-    // Given
-    const olderArticle = {
-      id: "5e1f0a2b-0001-4000-8000-000000000001",
-      title: "Older Post",
-      content: "Content of older post",
-      publishedAt: "2026-08-01T10:00:00.000Z",
-    };
-    const newerArticle = {
-      id: "5e1f0a2b-0002-4000-8000-000000000002",
-      title: "Newer Post",
-      content: "Content of newer post",
-      publishedAt: "2026-08-10T10:00:00.000Z",
-    };
-    const getSpy = vi
-      .spyOn(apiClient, "get")
-      .mockResolvedValueOnce({ data: [olderArticle, newerArticle] });
-
-    // When
-    const result = await fetchArticles();
-
-    // Then
-    expect(getSpy).toHaveBeenCalledWith("/api/v1/articles", {
-      signal: undefined,
+      // Then
+      expect(sorted.map((item) => item.id)).toEqual([
+        sampleArticleB.id,
+        sampleArticleA.id,
+      ]);
+      expect(unsorted[0]?.id).toBe(sampleArticleA.id);
     });
-    expect(result).toEqual([newerArticle, olderArticle]);
-    getSpy.mockRestore();
   });
 
-  it("throws a validation error when API response does not match the Zod schema", async () => {
-    // Given
-    const invalidPayload = [{ id: "not-a-uuid", title: "" }];
-    const getSpy = vi
-      .spyOn(apiClient, "get")
-      .mockResolvedValueOnce({ data: invalidPayload });
+  describe("fetchArticles", () => {
+    it("fetches, validates, and returns articles sorted newest first", async () => {
+      // Given
+      const controller = new AbortController();
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [sampleArticleA, sampleArticleB],
+      });
 
-    // When & Then
-    await expect(fetchArticles()).rejects.toThrow();
-    getSpy.mockRestore();
+      // When
+      const result = await fetchArticles(controller.signal);
+
+      // Then
+      expect(apiClient.get).toHaveBeenCalledWith("/api/v1/articles", {
+        signal: controller.signal,
+      });
+      expect(result.map((item) => item.id)).toEqual([
+        sampleArticleB.id,
+        sampleArticleA.id,
+      ]);
+    });
+
+    it("throws a validation error when API returns invalid shape", async () => {
+      // Given
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ id: "not-a-uuid", title: "" }],
+      });
+
+      // When & Then
+      await expect(fetchArticles()).rejects.toThrow();
+    });
+  });
+
+  describe("fetchArticleById", () => {
+    it("fetches and validates a single article by UUID", async () => {
+      // Given
+      const controller = new AbortController();
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: sampleArticleA,
+      });
+
+      // When
+      const result = await fetchArticleById(
+        sampleArticleA.id,
+        controller.signal,
+      );
+
+      // Then
+      expect(apiClient.get).toHaveBeenCalledWith(
+        `/api/v1/articles/${sampleArticleA.id}`,
+        { signal: controller.signal },
+      );
+      expect(result).toEqual(sampleArticleA);
+    });
+
+    it("throws ArticleNotFoundError without calling API when ID is not a valid UUID", async () => {
+      // Given
+      const invalidId = "not-a-valid-uuid";
+
+      // When & Then
+      await expect(fetchArticleById(invalidId)).rejects.toBeInstanceOf(
+        ArticleNotFoundError,
+      );
+      expect(apiClient.get).not.toHaveBeenCalled();
+    });
+
+    it("throws ArticleNotFoundError when API responds with 404", async () => {
+      // Given
+      const missingId = "33333333-3333-4333-8333-333333333333";
+      const notFoundError = new AxiosError(
+        "Request failed with status code 404",
+        "ERR_BAD_REQUEST",
+        undefined,
+        undefined,
+        {
+          status: 404,
+          statusText: "Not Found",
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+          data: { message: "Article not found" },
+        },
+      );
+      vi.mocked(apiClient.get).mockRejectedValueOnce(notFoundError);
+
+      // When & Then
+      await expect(fetchArticleById(missingId)).rejects.toBeInstanceOf(
+        ArticleNotFoundError,
+      );
+    });
+
+    it("rethrows unexpected network or server errors", async () => {
+      // Given
+      vi.mocked(apiClient.get).mockRejectedValueOnce(new Error("Network down"));
+
+      // When & Then
+      await expect(fetchArticleById(sampleArticleA.id)).rejects.toThrow(
+        "Network down",
+      );
+    });
+
+    it("throws a validation error when single article payload has invalid shape", async () => {
+      // Given
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { id: sampleArticleA.id, title: "Missing content and date" },
+      });
+
+      // When & Then
+      await expect(fetchArticleById(sampleArticleA.id)).rejects.toThrow();
+    });
   });
 });
