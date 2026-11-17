@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import type { Article } from "../../../services/api/schemas/article.schema";
 import BlogSection from "./BlogSection";
@@ -24,18 +25,26 @@ describe("<BlogSection />", () => {
     const pendingLoader = vi.fn(() => new Promise<Article[]>(() => {}));
 
     // When
-    render(<BlogSection loader={pendingLoader} />);
+    render(
+      <MemoryRouter>
+        <BlogSection loader={pendingLoader} />
+      </MemoryRouter>,
+    );
 
     // Then
     expect(screen.getByText("Loading articles...")).toBeInTheDocument();
   });
 
-  it("renders articles newest first with title and formatted date", async () => {
+  it("renders articles newest first with links to their article pages", async () => {
     // Given
     const loader = vi.fn().mockResolvedValue(sampleArticles);
 
     // When
-    render(<BlogSection loader={loader} />);
+    render(
+      <MemoryRouter>
+        <BlogSection loader={loader} />
+      </MemoryRouter>,
+    );
 
     // Then
     const headings = await screen.findAllByRole("heading", { level: 3 });
@@ -43,6 +52,12 @@ describe("<BlogSection />", () => {
       "Second Newer Article",
       "First Older Article",
     ]);
+    expect(
+      screen.getByRole("link", { name: /Second Newer Article/i }),
+    ).toHaveAttribute("href", "/articles/5e1f0a2b-0002-4000-8000-000000000002");
+    expect(
+      screen.getByRole("link", { name: /First Older Article/i }),
+    ).toHaveAttribute("href", "/articles/5e1f0a2b-0001-4000-8000-000000000001");
     expect(screen.getByText("Aug 12, 2026")).toBeInTheDocument();
     expect(screen.getByText("Aug 1, 2026")).toBeInTheDocument();
   });
@@ -52,7 +67,11 @@ describe("<BlogSection />", () => {
     const loader = vi.fn().mockResolvedValue([]);
 
     // When
-    render(<BlogSection loader={loader} />);
+    render(
+      <MemoryRouter>
+        <BlogSection loader={loader} />
+      </MemoryRouter>,
+    );
 
     // Then
     expect(
@@ -68,7 +87,11 @@ describe("<BlogSection />", () => {
       .mockResolvedValueOnce(sampleArticles);
 
     // When
-    render(<BlogSection loader={loader} />);
+    render(
+      <MemoryRouter>
+        <BlogSection loader={loader} />
+      </MemoryRouter>,
+    );
     const retryButton = await screen.findByRole("button", {
       name: "Try again",
     });
@@ -98,7 +121,11 @@ describe("<BlogSection />", () => {
     });
 
     // When
-    const { unmount } = render(<BlogSection loader={loader} />);
+    const { unmount } = render(
+      <MemoryRouter>
+        <BlogSection loader={loader} />
+      </MemoryRouter>,
+    );
     unmount();
     resolveDelayed(sampleArticles);
     await Promise.resolve();
