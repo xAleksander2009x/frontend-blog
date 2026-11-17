@@ -1,4 +1,4 @@
-﻿# Frontend Blog
+# Frontend Blog
 
 Personal page and blog front-end application built with React, Vite, and TypeScript.
 
@@ -28,12 +28,26 @@ Personal page and blog front-end application built with React, Vite, and TypeScr
 
 ## API Connection
 
-The front-end application communicates with the local back-end API running at `http://localhost`.
+The front-end application reads the back-end API base URL from the `VITE_API_URL` environment variable (defaulting to `http://localhost:3000`).
+
+To change the API address without modifying source code:
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Set `VITE_API_URL` to your API base URL:
+   ```env
+   VITE_API_URL=http://localhost:3000
+   ```
+3. Restart the development server or rebuild the application.
 
 ## Available Scripts
 
 - `yarn dev` - Starts the local development server
 - `yarn build` - Builds the application for production
 - `yarn test --run` - Runs unit tests with Vitest
+- `yarn test:coverage` - Runs unit tests with coverage report
+- `yarn e2e` - Runs end-to-end tests with Playwright
 - `yarn lint` - Checks code formatting and linting with Biome
 - `yarn storybook` - Starts Storybook at `http://localhost:6006`

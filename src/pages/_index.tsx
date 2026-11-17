@@ -1,4 +1,5 @@
-﻿import AboutBio from "../components/about-me/AboutBio/AboutBio";
+import AboutBio from "../components/about-me/AboutBio/AboutBio";
+import BlogSection from "../components/about-me/BlogSection/BlogSection";
 import ContactLinks from "../components/about-me/ContactLinks/ContactLinks";
 import ProfileHeader from "../components/about-me/ProfileHeader/ProfileHeader";
 
@@ -37,6 +38,8 @@ const Index = () => {
             },
           ]}
         />
+
+        <BlogSection title="Articles" />
       </div>
     </main>
   );
